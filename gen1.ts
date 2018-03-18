@@ -174,19 +174,8 @@ const getPokemonListForParty = (buf: Buffer, entries: number = 6) => {
     return parsePartyPokemon(buf);
 }
 
-const split = (buf) => {
-    const bufs = [];
-    let counter = 0;
-    for (let i = 0; buf.length; i++) {
-        while (buf[i] != 0xFF) {
-            bufs.push(buf[i]);
-        }
-    }
-    return bufs;
-}
-
 const getPokemonListForBox = (buf: Buffer, entries: number = 6) => {
-    const box = split(Buffer.from(buf));
+    const box = splitUp(Buffer.from(buf), entries);
 
     const pokes = box.map(box => parsePartyPokemon(box));
     
@@ -225,7 +214,7 @@ const parseBoxedPokemon = (buf: Buffer) => {
     const speciesList = getSpeciesList(rawSpeciesList);
     const pokemonList = getPokemonListForBox(box.slice(0x0016, 0x0016 + 660), entriesUsed);
     const OTNames = box.slice(0x02AA, 0x02AA + 220);
-    const pokemonNames = getPokemonNames(box.slice(0x0386, 0x0386 + 220), 22);
+    const pokemonNames = getPokemonNames(box.slice(0x0386, 0x0386 + 220), entriesUsed);
 
     return {
         entriesUsed,
