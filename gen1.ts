@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { GEN_1_POKEMON_MAP, GEN_1_CHARACTER_MAP, MOVES_ARRAY } from './utils';
 
 interface GEN_1_SAVE {
     yellow: boolean;
@@ -39,7 +40,9 @@ const OFFSETS = {
     CURRENT_POKEMON_BOX     : 0x30C0,
     CHECKSUM                : 0x3523,
     POKEMON_PC_FIRST_HALF   : 0x4000,
-    POKEMON_PC_SECOND_HALF  : 0x6000
+    POKEMON_PC_SECOND_HALF  : 0x6000,
+    BOX_ONE                 : 0x4000,
+    BOX_TWO                 : 0x4462
 };
 
 const checksum = (data: Uint8Array) => {
@@ -55,7 +58,6 @@ const loadSaveFile = (filename: string) => {
         if (err) throw err;
         const file = Buffer.from(data);
         parseFile(file);
-        console.log('file', file);
     });
 
 
@@ -66,21 +68,21 @@ const convertTextToUTF8 = (inputBuffer, outputText, numChars) => {
 }
 
 const TYPE = {
-    NORMAL   : 0x00,
-    FIGHTING : 0x01,
-    FLYING   : 0x02,
-    POISON   : 0x03,
-    GROUND   : 0x04,
-    ROCK     : 0x05,
-    BUG      : 0x07,
-    GHOST    : 0x08,
-    FIRE     : 0x14,
-    WATER    : 0x15,
-    GRASS    : 0x16,
-    ELECTRIC : 0x17,
-    PSYCHIC  : 0x18,
-    ICE      : 0x19,
-    DRAGON   : 0x1A
+    0x00: 'NORMAL',
+    0x01: 'FIGHTING',
+    0x02: 'FLYING',
+    0x03: 'POSION',
+    0x04: 'GROUND',
+    0x05: 'ROCK',
+    0x07: 'BUG',
+    0x08: 'GHOST',
+    0x14: 'FIRE',
+    0x15: 'WATER',
+    0x16: 'GRASS',
+    0x17: 'ELECTRIC',
+    0x18: 'PSYCHIC',
+    0x19: 'ICE',
+    0x1A: 'DRAGON'
 }
 
 interface Pokemon {
@@ -100,109 +102,166 @@ interface PartyPokemon {
     nicknames: number[][];
 }
 
-const CHARACTER_MAP = {
-    0x80: 'A',
-    0x81: 'B',
-    0x82: 'C',
-    0x83: 'D',
-    0x84: 'E',
-    0x85: 'F',
-    0x86: 'G',
-    0x87: 'H',
-    0x88: 'I',
-    0x89: 'J',
-    0x8A: 'K',
-    0x8B: 'L',
-    0x8C: 'M',
-    0x8D: 'N',
-    0x8E: 'O',
-    0x8F: 'P',
-    0x90: 'Q',
-    0x91: 'R',
-    0x92: 'S',
-    0x93: 'T',
-    0x94: 'U',
-    0x95: 'V',
-    0x96: 'W',
-    0x97: 'X',
-    0x98: 'Y',
-    0x99: 'Z',
-    0x9A: '(',
-    0x9B: ')',
-    0x9C: ':',
-    0x9D: ';',
-    0x9E: '[',
-    0x9F: ']',
-    0xA0: 'a',
-    0xA1: 'b',
-    0xA2: 'c',
-    0xA3: 'd',
-    0xA4: 'e',
-    0xA5: 'f',
-    0xA6: 'g',
-    0xA7: 'h',
-    0xA8: 'i',
-    0xA9: 'j',
-    0xAA: 'k',
-    0xAB: 'l',
-    0xAC: 'm',
-    0xAD: 'n',
-    0xAE: 'o',
-    0xAF: 'p',
-    0xB0: 'q',
-    0xB1: 'r',
-    0xB2: 's',
-    0xB3: 't',
-    0xB4: 'u',
-    0xB5: 'v',
-    0xB6: 'w',
-    0xB7: 'x',
-    0xB8: 'y',
-    0xB9: 'z',
-    0xBA: 'é',
-    0xBB: '\'d',
-    0xBC: '\'l',
-    0xBD: '\'s',
-    0xBE: '\'t',
-    0xBF: '\'v',
-    0xEF: '♂',
-    0xE0: '\'',
-    0xE4: '-',
-    0xE7: '?',
-    0xE8: '!',
-    0xE9: '.',
-    0xF2: '.',
-    0xF3: '/',
-    0xF4: ',',
-    0xF5: '♀',
-    0xF6: '0',
-    0xF7: '1',
-    0xF8: '2',
-    0xF9: '3',
-    0xFA: '4',
-    0xFB: '5',
-    0xFC: '6',
-    0xFD: '7',
-    0xFE: '8',
-    0xFF: '9' 
-}
-
-const convertTrainerName = (buf: Buffer) => {
+const convertWithCharMap = (buf: Buffer) => {
     let str = [];
-    for (let i = 0; i < 11; i++) {
-        str.push(CHARACTER_MAP[buf[i]] || '');
+    for (let i = 0; i < buf.length; i++) {
+        if (buf[i] === 0xFF) break;
+        str.push(GEN_1_CHARACTER_MAP[buf[i]] || '');
     }
     return str.join('');
+}
+
+const getSpeciesList = (buf: Buffer) => {
+    let str = [];
+    for (let i = 0; i < buf.length; i++) {
+        if (buf[i] === 0xFF) {
+            break;
+        } else {
+            str.push(GEN_1_POKEMON_MAP[buf[i]] || 'MISSINGNO');
+        }
+    }
+    return str;
+}
+
+const parsePartyPokemon = (buf: Buffer) => {
+    const pokemon = Buffer.from(buf);
+    const species = GEN_1_POKEMON_MAP[pokemon[0x00]];
+    const level = pokemon[0x03];
+    const type1 = TYPE[pokemon[0x05]];
+    const type2 = TYPE[pokemon[0x06]];
+    const moves = [
+        MOVES_ARRAY[pokemon[0x08]],
+        MOVES_ARRAY[pokemon[0x09]],
+        MOVES_ARRAY[pokemon[0x0A]],
+        MOVES_ARRAY[pokemon[0x0B]]
+    ];
+    return {
+        species,
+        level,
+        type1,
+        type2,
+        moves
+    }
+}
+
+function splitUp(arr, n) {
+    var rest = arr.length % n, // how much to divide
+        restUsed = rest, // to keep track of the division over the elements
+        partLength = Math.floor(arr.length / n),
+        result = [];
+
+    for(var i = 0; i < arr.length; i += partLength) {
+        var end = partLength + i,
+            add = false;
+
+        if(rest !== 0 && restUsed) { // should add one element for the division
+            end++;
+            restUsed--; // we've used one division element now
+            add = true;
+        }
+
+        result.push(arr.slice(i, end)); // part of the array
+
+        if(add) {
+            i++; // also increment i in the case we added an extra element for division
+        }
+    }
+
+    return result;
+}
+
+const getPokemonListForParty = (buf: Buffer, entries: number = 6) => {
+    return parsePartyPokemon(buf);
+}
+
+const split = (buf) => {
+    const bufs = [];
+    let counter = 0;
+    for (let i = 0; buf.length; i++) {
+        while (buf[i] != 0xFF) {
+            bufs.push(buf[i]);
+        }
+    }
+    return bufs;
+}
+
+const getPokemonListForBox = (buf: Buffer, entries: number = 6) => {
+    const box = split(Buffer.from(buf));
+
+    const pokes = box.map(box => parsePartyPokemon(box));
+    
+
+    return pokes;
+}
+
+const getPokemonNames = (buf: Buffer, entries: number = 6) => {
+    const pokes = splitUp(Buffer.from(buf), entries);
+    const names = pokes.map(poke => convertWithCharMap(poke));
+    return names;
+}
+
+const parsePokemonParty = (buf: Buffer) => {
+    const party = Buffer.from(buf);
+    const entriesUsed = party[0x0000];
+    const rawSpeciesList = party.slice(0x0001,0x0007);
+    const speciesList = getSpeciesList(rawSpeciesList);
+    const pokemonList = getPokemonListForParty(party.slice(0x0008, 0x0008 + 264), entriesUsed);
+    const OTNames = party.slice(0x0110, 0x0110 + 66);
+    const pokemonNames = getPokemonNames(party.slice(0x0152, 0x152 + 66), entriesUsed);
+
+    return {
+        entriesUsed,
+        speciesList,
+        pokemonList,
+        // OTNames,
+        pokemonNames
+    }
+}
+
+const parseBoxedPokemon = (buf: Buffer) => {
+    const box = Buffer.from(buf);
+    const entriesUsed = box[0x0000];
+    const rawSpeciesList = box.slice(0x0001, 0x0001 + 21);
+    const speciesList = getSpeciesList(rawSpeciesList);
+    const pokemonList = getPokemonListForBox(box.slice(0x0016, 0x0016 + 660), entriesUsed);
+    const OTNames = box.slice(0x02AA, 0x02AA + 220);
+    const pokemonNames = getPokemonNames(box.slice(0x0386, 0x0386 + 220), 22);
+
+    return {
+        entriesUsed,
+        speciesList,
+        pokemonList,
+        // OTNames,
+        pokemonNames
+    }
+}
+
+const parseTime = (buf: Buffer) => {
+    const time = Buffer.from(buf);
+    const hours = time[0x01] + time[0x00];
+    const minutes = Math.ceil(time[0x02] + (time[0x03] / 60));
+
+    return `${hours}:${minutes}`;
 }
 
 const parseFile = (file) => {
 
 
     const yellow = file[OFFSETS.PIKACHU_FRIENDSHIP] > 0;
-    const trainerName = convertTrainerName(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11));
-    const trainerID = file[OFFSETS.PLAYER_ID];
-    const money = file[OFFSETS.MONEY];
-    const pokemonParty = file[OFFSETS.POKEMON_PARTY];
+    const trainerName = convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 7));
+    const trainerID = file.slice(OFFSETS.PLAYER_ID, OFFSETS.PLAYER_ID + 2).map(char => char.toString());
+    const rivalName = convertWithCharMap(file.slice(OFFSETS.RIVAL_NAME, OFFSETS.RIVAL_NAME + 7));
+    const badges = file[OFFSETS.BADGES];
+    const timePlayed = parseTime(file.slice(OFFSETS.TIME_PLAYED, OFFSETS.TIME_PLAYED + 4));
+    const pokedexOwned = file.slice(OFFSETS.POKEDEX_OWNED, OFFSETS.POKEDEX_OWNED + 19);
+    const pokedexSeen = file.slice(OFFSETS.POKEDEX_SEEN, OFFSETS.POKEDEX_SEEN + 19);
+    const money = parseInt(file.slice(OFFSETS.MONEY, OFFSETS.MONEY + 3).map(d => d.toString(16)).join(''));
+    const pokemonParty = parsePokemonParty(file.slice(OFFSETS.POKEMON_PARTY, OFFSETS.POKEMON_PARTY + 404));
+    const casinoCoins = parseInt(file.slice(OFFSETS.CASINO_COINS, OFFSETS.CASINO_COINS + 2).map(d => d.toString(16)).join(''));
+
+    const boxedPokemon = parseBoxedPokemon(file.slice(OFFSETS.BOX_ONE, OFFSETS.BOX_ONE + 1122)); 
+    const deadPokemon = parseBoxedPokemon(file.slice(OFFSETS.BOX_TWO, OFFSETS.BOX_TWO + 11222));
+    
 
     // const ellow = file[0];
 
@@ -210,11 +269,19 @@ const parseFile = (file) => {
         yellow,
         trainerName,
         trainerID,
+        timePlayed,
         money,
         pokemonParty,
+        casinoCoins,
+        // pokedexOwned,
+        // pokedexSeen,
+        badges,
+        rivalName,
+        boxedPokemon,
+        deadPokemon
     }
 
-    console.log(save);
+    console.log(JSON.stringify(save, null, 2));
 
     return save;
 }
