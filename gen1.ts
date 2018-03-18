@@ -53,18 +53,12 @@ const checksum = (data: Uint8Array) => {
     return checksum_n;
 }
 
-const loadSaveFile = (filename: string) => {
-    fs.readFile(filename, (err, data) => {
+export const loadGen1SaveFile = (filename: string) => {
+    return fs.readFile(filename, (err, data) => {
         if (err) throw err;
         const file = Buffer.from(data);
-        parseFile(file);
+        return parseFile(file);
     });
-
-
-}
-
-const convertTextToUTF8 = (inputBuffer, outputText, numChars) => {
-
 }
 
 const TYPE = {
@@ -105,7 +99,7 @@ interface PartyPokemon {
 const convertWithCharMap = (buf: Buffer) => {
     let str = [];
     for (let i = 0; i < buf.length; i++) {
-        if (buf[i] === 0xFF) break;
+        if (buf[i] == 0xFF) break;
         str.push(GEN_1_CHARACTER_MAP[buf[i]] || '');
     }
     return str.join('');
@@ -233,13 +227,13 @@ const parseTime = (buf: Buffer) => {
     return `${hours}:${minutes}`;
 }
 
-const parseFile = (file) => {
+export const parseFile = (file) => {
 
 
     const yellow = file[OFFSETS.PIKACHU_FRIENDSHIP] > 0;
-    const trainerName = convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 7));
-    const trainerID = file.slice(OFFSETS.PLAYER_ID, OFFSETS.PLAYER_ID + 2).map(char => char.toString());
-    const rivalName = convertWithCharMap(file.slice(OFFSETS.RIVAL_NAME, OFFSETS.RIVAL_NAME + 7));
+    const trainerName = convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11));
+    const trainerID = file.slice(OFFSETS.PLAYER_ID, OFFSETS.PLAYER_ID + 2).map(char => char.toString()).join('');
+    const rivalName = convertWithCharMap(file.slice(OFFSETS.RIVAL_NAME, OFFSETS.RIVAL_NAME + 11));
     const badges = file[OFFSETS.BADGES];
     const timePlayed = parseTime(file.slice(OFFSETS.TIME_PLAYED, OFFSETS.TIME_PLAYED + 4));
     const pokedexOwned = file.slice(OFFSETS.POKEDEX_OWNED, OFFSETS.POKEDEX_OWNED + 19);
@@ -255,7 +249,7 @@ const parseFile = (file) => {
     // const ellow = file[0];
 
     const save = {
-        yellow,
+        //yellow,
         trainerName,
         trainerID,
         timePlayed,
@@ -275,7 +269,7 @@ const parseFile = (file) => {
     return save;
 }
 
-loadSaveFile('./yellow.sav');
+// loadSaveFile('./yellow.sav');
 
 /**
  * Money: 3175
