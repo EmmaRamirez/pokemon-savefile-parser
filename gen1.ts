@@ -314,7 +314,7 @@ export const parseFile = async (file, format) => {
     
 }
 
-export const loadGen1SaveFile = async (filename: string, format: 'plain' | 'nuzlocke') => {
+export const loadGen1SaveFile = async (filename: string, format: 'plain' | 'nuzlocke' = 'nuzlocke') => {
     const save = await fs.readFileSync(filename);
     
     try {
