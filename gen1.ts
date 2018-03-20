@@ -53,14 +53,6 @@ const checksum = (data: Uint8Array) => {
     return checksum_n;
 }
 
-export const loadGen1SaveFile = (filename: string) => {
-    return fs.readFile(filename, (err, data) => {
-        if (err) throw err;
-        const file = Buffer.from(data);
-        return parseFile(file);
-    });
-}
-
 const TYPE = {
     0x00: 'NORMAL',
     0x01: 'FIGHTING',
@@ -165,7 +157,9 @@ function splitUp(arr, n) {
 }
 
 const getPokemonListForParty = (buf: Buffer, entries: number = 6) => {
-    return parsePartyPokemon(buf);
+    const party = splitUp(Buffer.from(buf), entries);
+    const pokes = party.map(box => parsePartyPokemon(box));
+    return pokes;
 }
 
 const getPokemonListForBox = (buf: Buffer, entries: number = 6) => {
@@ -181,6 +175,19 @@ const getPokemonNames = (buf: Buffer, entries: number = 6) => {
     const pokes = splitUp(Buffer.from(buf), entries);
     const names = pokes.map(poke => convertWithCharMap(poke));
     return names;
+}
+
+export interface Gen1PokemonObject {
+    entriesUsed: number;
+    speciesList: string[];
+    pokemonList: {
+        species: string;
+        level: number;
+        type1: string;
+        type2: string;
+        moves: string[];
+    }[];
+    pokemonNames: string[];
 }
 
 const parsePokemonParty = (buf: Buffer) => {
@@ -201,7 +208,7 @@ const parsePokemonParty = (buf: Buffer) => {
     }
 }
 
-const parseBoxedPokemon = (buf: Buffer) => {
+const parseBoxedPokemon = (buf: Buffer):Gen1PokemonObject => {
     const box = Buffer.from(buf);
     const entriesUsed = box[0x0000];
     const rawSpeciesList = box.slice(0x0001, 0x0001 + 21);
@@ -219,6 +226,25 @@ const parseBoxedPokemon = (buf: Buffer) => {
     }
 }
 
+const transformPokemon = (pokemonObject:Gen1PokemonObject, status: string) => {
+    const TIER:Readonly<{ [status: string]: number}> = Object.freeze({
+        'Team': 1,
+        'Boxed': 2,
+        'Dead': 3
+    });
+    return pokemonObject.pokemonList.map((poke, index) => {
+        return {
+            position: (index + 1) * TIER[status],
+            species: poke.species,
+            status: status,
+            level: poke.level,
+            types: [poke.type1, poke.type2],
+            moves: poke.moves
+        }
+    })
+    
+}
+
 const parseTime = (buf: Buffer) => {
     const time = Buffer.from(buf);
     const hours = time[0x01] + time[0x00];
@@ -227,7 +253,7 @@ const parseTime = (buf: Buffer) => {
     return `${hours}:${minutes}`;
 }
 
-export const parseFile = (file) => {
+export const parseFile = async (file, format) => {
 
 
     const yellow = file[OFFSETS.PIKACHU_FRIENDSHIP] > 0;
@@ -264,9 +290,40 @@ export const parseFile = (file) => {
         deadPokemon
     }
 
-    console.log(JSON.stringify(save, null, 2));
 
-    return save;
+    const save2 = {
+            trainer: {
+                name: trainerName,
+                id: trainerID,
+                time: timePlayed,
+                money: money,
+                badges: badges
+            },
+            pokemon: [
+                ...transformPokemon(pokemonParty, 'Team'),
+                ...transformPokemon(boxedPokemon, 'Boxed'),
+                ...transformPokemon(deadPokemon, 'Dead')
+            ],
+
+        }
+    
+    // console.log(save2);
+
+    return save2;
+
+    
+}
+
+export const loadGen1SaveFile = async (filename: string, format: 'plain' | 'nuzlocke') => {
+    const save = await fs.readFileSync(filename);
+    
+    try {
+        const file = Buffer.from(save);
+        const result = await parseFile(file, format);
+        return await result;
+    } catch {
+        throw new Error('fuck');
+    }
 }
 
 // loadSaveFile('./yellow.sav');
