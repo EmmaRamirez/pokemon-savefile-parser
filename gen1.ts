@@ -111,7 +111,9 @@ const getSpeciesList = (buf: Buffer) => {
 
 const parsePartyPokemon = (buf: Buffer) => {
     const pokemon = Buffer.from(buf);
+    console.log(pokemon);
     const species = GEN_1_POKEMON_MAP[pokemon[0x00]];
+    if (pokemon[0x00] && pokemon[0x00] !== 255) console.log(species, pokemon[0x00])
     const level = pokemon[0x03];
     const type1 = TYPE[pokemon[0x05]];
     const type2 = TYPE[pokemon[0x06]];
@@ -136,11 +138,11 @@ function splitUp(arr, n) {
         partLength = Math.floor(arr.length / n),
         result = [];
 
-    for(var i = 0; i < arr.length; i += partLength) {
+    for (var i = 0; i < arr.length; i += partLength) {
         var end = partLength + i,
             add = false;
 
-        if(rest !== 0 && restUsed) { // should add one element for the division
+        if (rest !== 0 && restUsed) { // should add one element for the division
             end++;
             restUsed--; // we've used one division element now
             add = true;
@@ -148,7 +150,7 @@ function splitUp(arr, n) {
 
         result.push(arr.slice(i, end)); // part of the array
 
-        if(add) {
+        if (add) {
             i++; // also increment i in the case we added an extra element for division
         }
     }
@@ -195,9 +197,9 @@ const parsePokemonParty = (buf: Buffer) => {
     const entriesUsed = party[0x0000];
     const rawSpeciesList = party.slice(0x0001,0x0007);
     const speciesList = getSpeciesList(rawSpeciesList);
-    const pokemonList = getPokemonListForParty(party.slice(0x0008, 0x0008 + 264), entriesUsed);
+    const pokemonList = getPokemonListForParty(party.slice(0x0008, 0x0008 + 264), 6);
     const OTNames = party.slice(0x0110, 0x0110 + 66);
-    const pokemonNames = getPokemonNames(party.slice(0x0152, 0x152 + 66), entriesUsed);
+    const pokemonNames = getPokemonNames(party.slice(0x0152, 0x152 + 66), 6);
 
     return {
         entriesUsed,
@@ -233,6 +235,10 @@ const transformPokemon = (pokemonObject:Gen1PokemonObject, status: string) => {
         'Dead': 3
     });
     return pokemonObject.pokemonList.map((poke, index) => {
+        if (index < 6) {
+            console.log(poke.species, poke.level)
+        }
+
         return {
             position: (index + 1) * TIER[status],
             species: poke.species,
@@ -249,15 +255,20 @@ const parseTime = (buf: Buffer) => {
     const time = Buffer.from(buf);
     const hours = time[0x01] + time[0x00];
     const minutes = Math.ceil(time[0x02] + (time[0x03] / 60));
+    const minutesFormatted = minutes === 0 ? '00' : minutes;
 
-    return `${hours}:${minutes}`;
+    return `${hours}:${minutesFormatted}`;
+}
+
+const handleTrainerName = (name) => {
+    return name === 'YELLOW' ? name : name.replace(/\YELLOW/g, '');
 }
 
 export const parseFile = async (file, format) => {
 
 
     const yellow = file[OFFSETS.PIKACHU_FRIENDSHIP] > 0;
-    const trainerName = convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11));
+    const trainerName = handleTrainerName(convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11)));
     const trainerID = file.slice(OFFSETS.PLAYER_ID, OFFSETS.PLAYER_ID + 2).map(char => char.toString()).join('');
     const rivalName = convertWithCharMap(file.slice(OFFSETS.RIVAL_NAME, OFFSETS.RIVAL_NAME + 11));
     const badges = file[OFFSETS.BADGES];
@@ -307,8 +318,6 @@ export const parseFile = async (file, format) => {
 
         }
     
-    // console.log(save2);
-
     return save2;
 
     
@@ -326,7 +335,7 @@ export const loadGen1SaveFile = async (filename: string, format: 'plain' | 'nuzl
     }
 }
 
-// loadSaveFile('./yellow.sav');
+loadGen1SaveFile('./yellow.sav');
 
 /**
  * Money: 3175
