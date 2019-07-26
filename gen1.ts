@@ -109,12 +109,10 @@ const getSpeciesList = (buf: Buffer) => {
     return str;
 }
 
-const parsePartyPokemon = (buf: Buffer) => {
+const parsePartyPokemon = (buf: Buffer, debug = false) => {
     const pokemon = Buffer.from(buf);
-    console.log(pokemon);
     const species = GEN_1_POKEMON_MAP[pokemon[0x00]];
-    if (pokemon[0x00] && pokemon[0x00] !== 255) console.log(species, pokemon[0x00])
-    const level = pokemon[0x03];
+    const level = pokemon[0x21];
     const type1 = TYPE[pokemon[0x05]];
     const type2 = TYPE[pokemon[0x06]];
     const moves = [
@@ -123,6 +121,7 @@ const parsePartyPokemon = (buf: Buffer) => {
         MOVES_ARRAY[pokemon[0x0A]],
         MOVES_ARRAY[pokemon[0x0B]]
     ];
+
     return {
         species,
         level,
@@ -160,7 +159,7 @@ function splitUp(arr, n) {
 
 const getPokemonListForParty = (buf: Buffer, entries: number = 6) => {
     const party = splitUp(Buffer.from(buf), entries);
-    const pokes = party.map(box => parsePartyPokemon(box));
+    const pokes = party.map(box => parsePartyPokemon(box, true));
     return pokes;
 }
 
@@ -235,10 +234,6 @@ const transformPokemon = (pokemonObject:Gen1PokemonObject, status: string) => {
         'Dead': 3
     });
     return pokemonObject.pokemonList.map((poke, index) => {
-        if (index < 6) {
-            console.log(poke.species, poke.level)
-        }
-
         return {
             position: (index + 1) * TIER[status],
             species: poke.species,
@@ -247,7 +242,7 @@ const transformPokemon = (pokemonObject:Gen1PokemonObject, status: string) => {
             types: [poke.type1, poke.type2],
             moves: poke.moves
         }
-    })
+    }).filter(poke => poke.species)
     
 }
 
@@ -317,6 +312,8 @@ export const parseFile = async (file, format) => {
             ],
 
         }
+
+    console.log(save2);
     
     return save2;
 
