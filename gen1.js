@@ -78,10 +78,10 @@ const getSpeciesList = (buf) => {
     }
     return str;
 };
-const parsePartyPokemon = (buf) => {
+const parsePartyPokemon = (buf, debug = false) => {
     const pokemon = Buffer.from(buf);
     const species = utils_1.GEN_1_POKEMON_MAP[pokemon[0x00]];
-    const level = pokemon[0x03];
+    const level = pokemon[0x21];
     const type1 = TYPE[pokemon[0x05]];
     const type2 = TYPE[pokemon[0x06]];
     const moves = [
@@ -118,7 +118,7 @@ function splitUp(arr, n) {
 }
 const getPokemonListForParty = (buf, entries = 6) => {
     const party = splitUp(Buffer.from(buf), entries);
-    const pokes = party.map(box => parsePartyPokemon(box));
+    const pokes = party.map(box => parsePartyPokemon(box, true));
     return pokes;
 };
 const getPokemonListForBox = (buf, entries = 6) => {
@@ -136,9 +136,9 @@ const parsePokemonParty = (buf) => {
     const entriesUsed = party[0x0000];
     const rawSpeciesList = party.slice(0x0001, 0x0007);
     const speciesList = getSpeciesList(rawSpeciesList);
-    const pokemonList = getPokemonListForParty(party.slice(0x0008, 0x0008 + 264), entriesUsed);
+    const pokemonList = getPokemonListForParty(party.slice(0x0008, 0x0008 + 264), 6);
     const OTNames = party.slice(0x0110, 0x0110 + 66);
-    const pokemonNames = getPokemonNames(party.slice(0x0152, 0x152 + 66), entriesUsed);
+    const pokemonNames = getPokemonNames(party.slice(0x0152, 0x152 + 66), 6);
     return {
         entriesUsed,
         speciesList,
@@ -178,17 +178,21 @@ const transformPokemon = (pokemonObject, status) => {
             types: [poke.type1, poke.type2],
             moves: poke.moves
         };
-    });
+    }).filter(poke => poke.species);
 };
 const parseTime = (buf) => {
     const time = Buffer.from(buf);
     const hours = time[0x01] + time[0x00];
     const minutes = Math.ceil(time[0x02] + (time[0x03] / 60));
-    return `${hours}:${minutes}`;
+    const minutesFormatted = minutes === 0 ? '00' : minutes;
+    return `${hours}:${minutesFormatted}`;
+};
+const handleTrainerName = (name) => {
+    return name === 'YELLOW' ? name : name.replace(/\YELLOW/g, '');
 };
 exports.parseFile = (file, format) => __awaiter(this, void 0, void 0, function* () {
     const yellow = file[OFFSETS.PIKACHU_FRIENDSHIP] > 0;
-    const trainerName = convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11));
+    const trainerName = handleTrainerName(convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11)));
     const trainerID = file.slice(OFFSETS.PLAYER_ID, OFFSETS.PLAYER_ID + 2).map(char => char.toString()).join('');
     const rivalName = convertWithCharMap(file.slice(OFFSETS.RIVAL_NAME, OFFSETS.RIVAL_NAME + 11));
     const badges = file[OFFSETS.BADGES];
@@ -230,7 +234,7 @@ exports.parseFile = (file, format) => __awaiter(this, void 0, void 0, function* 
             ...transformPokemon(deadPokemon, 'Dead')
         ],
     };
-    // console.log(save2);
+    console.log(save2);
     return save2;
 });
 exports.loadGen1SaveFile = (filename, format = 'nuzlocke') => __awaiter(this, void 0, void 0, function* () {
@@ -241,10 +245,10 @@ exports.loadGen1SaveFile = (filename, format = 'nuzlocke') => __awaiter(this, vo
         return yield result;
     }
     catch (_a) {
-        throw new Error('fuck');
+        throw new Error('Oops');
     }
 });
-// loadSaveFile('./yellow.sav');
+// loadGen1SaveFile('./yellow.sav');
 /**
  * Money: 3175
  * Badges: 0?
