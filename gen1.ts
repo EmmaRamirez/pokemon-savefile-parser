@@ -328,11 +328,11 @@ export const loadGen1SaveFile = async (filename: string, format: 'plain' | 'nuzl
         const result = await parseFile(file, format);
         return await result;
     } catch {
-        throw new Error('fuck');
+        throw new Error('Oops');
     }
 }
 
-loadGen1SaveFile('./yellow.sav');
+// loadGen1SaveFile('./yellow.sav');
 
 /**
  * Money: 3175
