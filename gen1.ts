@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { GEN_1_POKEMON_MAP, GEN_1_CHARACTER_MAP, MOVES_ARRAY } from './utils';
+import { splitUp, GEN_1_POKEMON_MAP, GEN_1_CHARACTER_MAP, MOVES_ARRAY } from './utils';
 
 interface GEN_1_SAVE {
     yellow: boolean;
@@ -131,31 +131,6 @@ const parsePartyPokemon = (buf: Buffer, debug = false) => {
     }
 }
 
-function splitUp(arr, n) {
-    var rest = arr.length % n, // how much to divide
-        restUsed = rest, // to keep track of the division over the elements
-        partLength = Math.floor(arr.length / n),
-        result = [];
-
-    for (var i = 0; i < arr.length; i += partLength) {
-        var end = partLength + i,
-            add = false;
-
-        if (rest !== 0 && restUsed) { // should add one element for the division
-            end++;
-            restUsed--; // we've used one division element now
-            add = true;
-        }
-
-        result.push(arr.slice(i, end)); // part of the array
-
-        if (add) {
-            i++; // also increment i in the case we added an extra element for division
-        }
-    }
-
-    return result;
-}
 
 const getPokemonListForParty = (buf: Buffer, entries: number = 6) => {
     const party = splitUp(Buffer.from(buf), entries);
@@ -240,7 +215,8 @@ const transformPokemon = (pokemonObject:Gen1PokemonObject, status: string) => {
             status: status,
             level: poke.level,
             types: [poke.type1, poke.type2],
-            moves: poke.moves
+            moves: poke.moves,
+            id: (Math.random() * 10).toString(16),
         }
     }).filter(poke => poke.species)
     

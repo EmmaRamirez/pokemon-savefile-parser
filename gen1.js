@@ -98,36 +98,18 @@ const parsePartyPokemon = (buf, debug = false) => {
         moves
     };
 };
-function splitUp(arr, n) {
-    var rest = arr.length % n, // how much to divide
-    restUsed = rest, // to keep track of the division over the elements
-    partLength = Math.floor(arr.length / n), result = [];
-    for (var i = 0; i < arr.length; i += partLength) {
-        var end = partLength + i, add = false;
-        if (rest !== 0 && restUsed) {
-            end++;
-            restUsed--; // we've used one division element now
-            add = true;
-        }
-        result.push(arr.slice(i, end)); // part of the array
-        if (add) {
-            i++; // also increment i in the case we added an extra element for division
-        }
-    }
-    return result;
-}
 const getPokemonListForParty = (buf, entries = 6) => {
-    const party = splitUp(Buffer.from(buf), entries);
+    const party = utils_1.splitUp(Buffer.from(buf), entries);
     const pokes = party.map(box => parsePartyPokemon(box, true));
     return pokes;
 };
 const getPokemonListForBox = (buf, entries = 6) => {
-    const box = splitUp(Buffer.from(buf), entries);
+    const box = utils_1.splitUp(Buffer.from(buf), entries);
     const pokes = box.map(box => parsePartyPokemon(box));
     return pokes;
 };
 const getPokemonNames = (buf, entries = 6) => {
-    const pokes = splitUp(Buffer.from(buf), entries);
+    const pokes = utils_1.splitUp(Buffer.from(buf), entries);
     const names = pokes.map(poke => convertWithCharMap(poke));
     return names;
 };
@@ -176,7 +158,8 @@ const transformPokemon = (pokemonObject, status) => {
             status: status,
             level: poke.level,
             types: [poke.type1, poke.type2],
-            moves: poke.moves
+            moves: poke.moves,
+            id: (Math.random() * 10).toString(16),
         };
     }).filter(poke => poke.species);
 };
