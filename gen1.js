@@ -57,10 +57,10 @@ const TYPE = {
     0x19: 'Ice',
     0x1A: 'Dragon'
 };
-const convertWithCharMap = (buf) => {
+const convertWithCharMap = (buf, nickname = false) => {
     let str = [];
     for (let i = 0; i < buf.length; i++) {
-        if (buf[i] == 0xFF)
+        if (buf[i] == 0xFF || (nickname && buf[i] == 0x50))
             break;
         str.push(utils_1.GEN_1_CHARACTER_MAP[buf[i]] || '');
     }
@@ -90,12 +90,16 @@ const parsePartyPokemon = (buf, debug = false) => {
         utils_1.MOVES_ARRAY[pokemon[0x0A]],
         utils_1.MOVES_ARRAY[pokemon[0x0B]]
     ];
+    // const evs = pokemon.slice(0x11, 0x11 + 10);
+    const ivs = pokemon.slice(0x1B, 0x1B + 2);
+    const id = ivs.toString('binary');
     return {
         species,
         level,
         type1,
         type2,
-        moves
+        moves,
+        id,
     };
 };
 const getPokemonListForParty = (buf, entries = 6) => {
@@ -110,7 +114,7 @@ const getPokemonListForBox = (buf, entries = 6) => {
 };
 const getPokemonNames = (buf, entries = 6) => {
     const pokes = utils_1.splitUp(Buffer.from(buf), entries);
-    const names = pokes.map(poke => convertWithCharMap(poke));
+    const names = pokes.map(poke => convertWithCharMap(poke, true));
     return names;
 };
 const parsePokemonParty = (buf) => {
@@ -121,6 +125,7 @@ const parsePokemonParty = (buf) => {
     const pokemonList = getPokemonListForParty(party.slice(0x0008, 0x0008 + 264), 6);
     const OTNames = party.slice(0x0110, 0x0110 + 66);
     const pokemonNames = getPokemonNames(party.slice(0x0152, 0x152 + 66), 6);
+    console.log(pokemonNames);
     return {
         entriesUsed,
         speciesList,
@@ -159,7 +164,8 @@ const transformPokemon = (pokemonObject, status) => {
             level: poke.level,
             types: [poke.type1, poke.type2],
             moves: poke.moves,
-            id: (Math.random() * 10).toString(16),
+            nickname: pokemonObject.pokemonNames[index],
+            id: poke.id,
         };
     }).filter(poke => poke.species);
 };
@@ -204,6 +210,7 @@ exports.parseFile = (file, format) => __awaiter(this, void 0, void 0, function* 
         deadPokemon
     };
     const save2 = {
+        isYellow: yellow,
         trainer: {
             name: trainerName,
             id: trainerID,

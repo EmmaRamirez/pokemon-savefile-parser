@@ -88,10 +88,10 @@ interface PartyPokemon {
     nicknames: number[][];
 }
 
-const convertWithCharMap = (buf: Buffer) => {
+const convertWithCharMap = (buf: Buffer, nickname = false) => {
     let str = [];
     for (let i = 0; i < buf.length; i++) {
-        if (buf[i] == 0xFF) break;
+        if (buf[i] == 0xFF || (nickname && buf[i] == 0x50)) break;
         str.push(GEN_1_CHARACTER_MAP[buf[i]] || '');
     }
     return str.join('');
@@ -121,13 +121,17 @@ const parsePartyPokemon = (buf: Buffer, debug = false) => {
         MOVES_ARRAY[pokemon[0x0A]],
         MOVES_ARRAY[pokemon[0x0B]]
     ];
+    // const evs = pokemon.slice(0x11, 0x11 + 10);
+    const ivs = pokemon.slice(0x1B, 0x1B + 2);
+    const id = ivs.toString('binary');
 
     return {
         species,
         level,
         type1,
         type2,
-        moves
+        moves,
+        id,
     }
 }
 
@@ -149,7 +153,7 @@ const getPokemonListForBox = (buf: Buffer, entries: number = 6) => {
 
 const getPokemonNames = (buf: Buffer, entries: number = 6) => {
     const pokes = splitUp(Buffer.from(buf), entries);
-    const names = pokes.map(poke => convertWithCharMap(poke));
+    const names = pokes.map(poke => convertWithCharMap(poke, true));
     return names;
 }
 
@@ -162,6 +166,7 @@ export interface Gen1PokemonObject {
         type1: string;
         type2: string;
         moves: string[];
+        id: string;
     }[];
     pokemonNames: string[];
 }
@@ -174,6 +179,7 @@ const parsePokemonParty = (buf: Buffer) => {
     const pokemonList = getPokemonListForParty(party.slice(0x0008, 0x0008 + 264), 6);
     const OTNames = party.slice(0x0110, 0x0110 + 66);
     const pokemonNames = getPokemonNames(party.slice(0x0152, 0x152 + 66), 6);
+    console.log(pokemonNames)
 
     return {
         entriesUsed,
@@ -216,7 +222,8 @@ const transformPokemon = (pokemonObject:Gen1PokemonObject, status: string) => {
             level: poke.level,
             types: [poke.type1, poke.type2],
             moves: poke.moves,
-            id: (Math.random() * 10).toString(16),
+            nickname: pokemonObject.pokemonNames[index],
+            id: poke.id,
         }
     }).filter(poke => poke.species)
     
@@ -274,6 +281,7 @@ export const parseFile = async (file, format) => {
 
 
     const save2 = {
+            isYellow: yellow,
             trainer: {
                 name: trainerName,
                 id: trainerID,
