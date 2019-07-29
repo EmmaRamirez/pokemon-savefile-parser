@@ -281,7 +281,7 @@ export const parseFile = async (file, format) => {
         return bit ? badgesPossible[index] : null
     }).filter(badge => badge);
 
-    console.log(badgesBinary, badges);
+    console.log(badgesBinary.split(''), badges);
 
     const save2 = {
             isYellow: yellow,
