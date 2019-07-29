@@ -223,7 +223,7 @@ const transformPokemon = (pokemonObject:Gen1PokemonObject, status: string) => {
             types: [poke.type1, poke.type2],
             moves: poke.moves,
             nickname: pokemonObject.pokemonNames[index],
-            id: poke.id,
+            id: poke.id + '-sav',
         }
     }).filter(poke => poke.species)
     
@@ -238,18 +238,14 @@ const parseTime = (buf: Buffer) => {
     return `${hours}:${minutesFormatted}`;
 }
 
-const handleTrainerName = (name) => {
-    return name === 'YELLOW' ? name : name.replace(/\YELLOW/g, '');
-}
-
 export const parseFile = async (file, format) => {
 
 
     const yellow = file[OFFSETS.PIKACHU_FRIENDSHIP] > 0;
-    const trainerName = handleTrainerName(convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11)));
+    const trainerName = convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11), true);
     const trainerID = file.slice(OFFSETS.PLAYER_ID, OFFSETS.PLAYER_ID + 2).map(char => char.toString()).join('');
     const rivalName = convertWithCharMap(file.slice(OFFSETS.RIVAL_NAME, OFFSETS.RIVAL_NAME + 11));
-    const badges = file[OFFSETS.BADGES];
+    const badgesByte = file[OFFSETS.BADGES];
     const timePlayed = parseTime(file.slice(OFFSETS.TIME_PLAYED, OFFSETS.TIME_PLAYED + 4));
     const pokedexOwned = file.slice(OFFSETS.POKEDEX_OWNED, OFFSETS.POKEDEX_OWNED + 19);
     const pokedexSeen = file.slice(OFFSETS.POKEDEX_SEEN, OFFSETS.POKEDEX_SEEN + 19);
@@ -273,12 +269,19 @@ export const parseFile = async (file, format) => {
         casinoCoins,
         // pokedexOwned,
         // pokedexSeen,
-        badges,
+        // badges,
         rivalName,
         boxedPokemon,
         deadPokemon
     }
 
+    const badgesPossible = [ { "name": "Boulder Badge", "image": "boulder-badge" }, { "name": "Cascade Badge", "image": "cascade-badge" }, { "name": "Thunder Badge", "image": "thunder-badge" }, { "name": "Rainbow Badge", "image": "rainbow-badge" }, { "name": "Soul Badge", "image": "soul-badge" }, { "name": "Marsh Badge", "image": "marsh-badge" }, { "name": "Volcano Badge", "image": "volcano-badge" }, { "name": "Earth Badge", "image": "earth-badge" } ];
+    const badgesBinary = (badgesByte >>> 0).toString(2);
+    const badges = badgesBinary.split('').map((bit, index) => {
+        return bit ? badgesPossible[index] : null
+    }).filter(badge => badge);
+
+    console.log(badgesBinary, badges);
 
     const save2 = {
             isYellow: yellow,
@@ -316,7 +319,8 @@ export const loadGen1SaveFile = async (filename: string, format: 'plain' | 'nuzl
     }
 }
 
-// loadGen1SaveFile('./yellow.sav');
+loadGen1SaveFile('./blue.sav');
+loadGen1SaveFile('./yellow.sav');
 
 /**
  * Money: 3175
