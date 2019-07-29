@@ -278,10 +278,8 @@ export const parseFile = async (file, format) => {
     const badgesPossible = [ { "name": "Boulder Badge", "image": "boulder-badge" }, { "name": "Cascade Badge", "image": "cascade-badge" }, { "name": "Thunder Badge", "image": "thunder-badge" }, { "name": "Rainbow Badge", "image": "rainbow-badge" }, { "name": "Soul Badge", "image": "soul-badge" }, { "name": "Marsh Badge", "image": "marsh-badge" }, { "name": "Volcano Badge", "image": "volcano-badge" }, { "name": "Earth Badge", "image": "earth-badge" } ];
     const badgesBinary = (badgesByte >>> 0).toString(2);
     const badges = badgesBinary.split('').map((bit, index) => {
-        return bit ? badgesPossible[index] : null
+        return parseInt(bit) ? badgesPossible[index] : null
     }).filter(badge => badge);
-
-    console.log(badgesBinary.split(''), badges);
 
     const save2 = {
             isYellow: yellow,
