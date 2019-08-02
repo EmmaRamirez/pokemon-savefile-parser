@@ -94,6 +94,14 @@ const parsePartyPokemon = (buf, boxed = false) => {
         utils_1.MOVES_ARRAY[pokemon[0x0A]],
         utils_1.MOVES_ARRAY[pokemon[0x0B]]
     ];
+    const extraData = boxed ? undefined : {
+        'currentHp': Buffer.from(pokemon.slice(0x01, 0x01 + 2)).readInt16BE(0),
+        'maxHp': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
+        'attack': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
+        'defense': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
+        'speed': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
+        'special': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
+    };
     // const evs = pokemon.slice(0x11, 0x11 + 10);
     const ivs = pokemon.slice(0x1B, 0x1B + 2);
     const id = ivs.toString('binary');
@@ -104,6 +112,7 @@ const parsePartyPokemon = (buf, boxed = false) => {
         type2,
         moves,
         id,
+        extraData,
     };
 };
 const getPokemonListForParty = (buf, entries = 6) => {
@@ -169,6 +178,7 @@ const transformPokemon = (pokemonObject, status) => {
             moves: poke.moves,
             nickname: pokemonObject.pokemonNames[index],
             id: poke.id + '-sav',
+            extraData: poke.extraData,
         };
     }).filter(poke => poke.species);
 };
