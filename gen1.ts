@@ -34,6 +34,7 @@ const OFFSETS = {
     PIKACHU_FRIENDSHIP      : 0x271C,
     ITEM_PC                 : 0x27E6,
     CURRENT_POKEMON_BOX_NUM : 0x284C,
+    CURRENT_BOX             : 0x30C0,
     CASINO_COINS            : 0x2850,
     TIME_PLAYED             : 0x2CED,
     POKEMON_PARTY           : 0x2F2C,
@@ -109,10 +110,10 @@ const getSpeciesList = (buf: Buffer) => {
     return str;
 }
 
-const parsePartyPokemon = (buf: Buffer, debug = false) => {
+const parsePartyPokemon = (buf: Buffer, boxed = false) => {
     const pokemon = Buffer.from(buf);
     const species = GEN_1_POKEMON_MAP[pokemon[0x00]];
-    const level = pokemon[0x21];
+    const level = boxed ? pokemon[0x21] : pokemon[0x03];
     const type1 = TYPE[pokemon[0x05]];
     const type2 = TYPE[pokemon[0x06]];
     const moves = [
@@ -138,14 +139,14 @@ const parsePartyPokemon = (buf: Buffer, debug = false) => {
 
 const getPokemonListForParty = (buf: Buffer, entries: number = 6) => {
     const party = splitUp(Buffer.from(buf), entries);
-    const pokes = party.map(box => parsePartyPokemon(box, true));
+    const pokes = party.map(box => parsePartyPokemon(box));
     return pokes;
 }
 
 const getPokemonListForBox = (buf: Buffer, entries: number = 6) => {
     const box = splitUp(Buffer.from(buf), entries);
 
-    const pokes = box.map(box => parsePartyPokemon(box));
+    const pokes = box.map(box => parsePartyPokemon(box, true));
     
 
     return pokes;
@@ -253,9 +254,8 @@ export const parseFile = async (file, format) => {
     const pokemonParty = parsePokemonParty(file.slice(OFFSETS.POKEMON_PARTY, OFFSETS.POKEMON_PARTY + 404));
     const casinoCoins = parseInt(file.slice(OFFSETS.CASINO_COINS, OFFSETS.CASINO_COINS + 2).map(d => d.toString(16)).join(''));
 
-    const boxedPokemon = parseBoxedPokemon(file.slice(OFFSETS.BOX_ONE, OFFSETS.BOX_ONE + 1122)); 
-    const deadPokemon = parseBoxedPokemon(file.slice(OFFSETS.BOX_TWO, OFFSETS.BOX_TWO + 11222));
-    
+    const boxedPokemon = parseBoxedPokemon(file.slice(OFFSETS.CURRENT_BOX, OFFSETS.CURRENT_BOX + 0x462)); 
+    const deadPokemon = parseBoxedPokemon(file.slice(OFFSETS.BOX_TWO, OFFSETS.BOX_TWO + 0x462));
 
     // const ellow = file[0];
 

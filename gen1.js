@@ -23,6 +23,7 @@ const OFFSETS = {
     PIKACHU_FRIENDSHIP: 0x271C,
     ITEM_PC: 0x27E6,
     CURRENT_POKEMON_BOX_NUM: 0x284C,
+    CURRENT_BOX: 0x30C0,
     CASINO_COINS: 0x2850,
     TIME_PLAYED: 0x2CED,
     POKEMON_PARTY: 0x2F2C,
@@ -78,10 +79,10 @@ const getSpeciesList = (buf) => {
     }
     return str;
 };
-const parsePartyPokemon = (buf, debug = false) => {
+const parsePartyPokemon = (buf, boxed = false) => {
     const pokemon = Buffer.from(buf);
     const species = utils_1.GEN_1_POKEMON_MAP[pokemon[0x00]];
-    const level = pokemon[0x21];
+    const level = boxed ? pokemon[0x21] : pokemon[0x03];
     const type1 = TYPE[pokemon[0x05]];
     const type2 = TYPE[pokemon[0x06]];
     const moves = [
@@ -104,12 +105,12 @@ const parsePartyPokemon = (buf, debug = false) => {
 };
 const getPokemonListForParty = (buf, entries = 6) => {
     const party = utils_1.splitUp(Buffer.from(buf), entries);
-    const pokes = party.map(box => parsePartyPokemon(box, true));
+    const pokes = party.map(box => parsePartyPokemon(box));
     return pokes;
 };
 const getPokemonListForBox = (buf, entries = 6) => {
     const box = utils_1.splitUp(Buffer.from(buf), entries);
-    const pokes = box.map(box => parsePartyPokemon(box));
+    const pokes = box.map(box => parsePartyPokemon(box, true));
     return pokes;
 };
 const getPokemonNames = (buf, entries = 6) => {
@@ -165,7 +166,7 @@ const transformPokemon = (pokemonObject, status) => {
             types: [poke.type1, poke.type2],
             moves: poke.moves,
             nickname: pokemonObject.pokemonNames[index],
-            id: poke.id,
+            id: poke.id + '-sav',
         };
     }).filter(poke => poke.species);
 };
@@ -176,23 +177,20 @@ const parseTime = (buf) => {
     const minutesFormatted = minutes === 0 ? '00' : minutes;
     return `${hours}:${minutesFormatted}`;
 };
-const handleTrainerName = (name) => {
-    return name === 'YELLOW' ? name : name.replace(/\YELLOW/g, '');
-};
 exports.parseFile = (file, format) => __awaiter(this, void 0, void 0, function* () {
     const yellow = file[OFFSETS.PIKACHU_FRIENDSHIP] > 0;
-    const trainerName = handleTrainerName(convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11)));
+    const trainerName = convertWithCharMap(file.slice(OFFSETS.PLAYER_NAME, OFFSETS.PLAYER_NAME + 11), true);
     const trainerID = file.slice(OFFSETS.PLAYER_ID, OFFSETS.PLAYER_ID + 2).map(char => char.toString()).join('');
     const rivalName = convertWithCharMap(file.slice(OFFSETS.RIVAL_NAME, OFFSETS.RIVAL_NAME + 11));
-    const badges = file[OFFSETS.BADGES];
+    const badgesByte = file[OFFSETS.BADGES];
     const timePlayed = parseTime(file.slice(OFFSETS.TIME_PLAYED, OFFSETS.TIME_PLAYED + 4));
     const pokedexOwned = file.slice(OFFSETS.POKEDEX_OWNED, OFFSETS.POKEDEX_OWNED + 19);
     const pokedexSeen = file.slice(OFFSETS.POKEDEX_SEEN, OFFSETS.POKEDEX_SEEN + 19);
     const money = parseInt(file.slice(OFFSETS.MONEY, OFFSETS.MONEY + 3).map(d => d.toString(16)).join(''));
     const pokemonParty = parsePokemonParty(file.slice(OFFSETS.POKEMON_PARTY, OFFSETS.POKEMON_PARTY + 404));
     const casinoCoins = parseInt(file.slice(OFFSETS.CASINO_COINS, OFFSETS.CASINO_COINS + 2).map(d => d.toString(16)).join(''));
-    const boxedPokemon = parseBoxedPokemon(file.slice(OFFSETS.BOX_ONE, OFFSETS.BOX_ONE + 1122));
-    const deadPokemon = parseBoxedPokemon(file.slice(OFFSETS.BOX_TWO, OFFSETS.BOX_TWO + 11222));
+    const boxedPokemon = parseBoxedPokemon(file.slice(OFFSETS.CURRENT_BOX, OFFSETS.CURRENT_BOX + 0x462));
+    const deadPokemon = parseBoxedPokemon(file.slice(OFFSETS.BOX_TWO, OFFSETS.BOX_TWO + 0x462));
     // const ellow = file[0];
     const save = {
         //yellow,
@@ -204,11 +202,16 @@ exports.parseFile = (file, format) => __awaiter(this, void 0, void 0, function* 
         casinoCoins,
         // pokedexOwned,
         // pokedexSeen,
-        badges,
+        // badges,
         rivalName,
         boxedPokemon,
         deadPokemon
     };
+    const badgesPossible = [{ "name": "Boulder Badge", "image": "boulder-badge" }, { "name": "Cascade Badge", "image": "cascade-badge" }, { "name": "Thunder Badge", "image": "thunder-badge" }, { "name": "Rainbow Badge", "image": "rainbow-badge" }, { "name": "Soul Badge", "image": "soul-badge" }, { "name": "Marsh Badge", "image": "marsh-badge" }, { "name": "Volcano Badge", "image": "volcano-badge" }, { "name": "Earth Badge", "image": "earth-badge" }];
+    const badgesBinary = (badgesByte >>> 0).toString(2);
+    const badges = badgesBinary.split('').map((bit, index) => {
+        return parseInt(bit) ? badgesPossible[index] : null;
+    }).filter(badge => badge);
     const save2 = {
         isYellow: yellow,
         trainer: {
@@ -238,7 +241,8 @@ exports.loadGen1SaveFile = (filename, format = 'nuzlocke') => __awaiter(this, vo
         throw new Error('Oops');
     }
 });
-// loadGen1SaveFile('./yellow.sav');
+exports.loadGen1SaveFile('./blue.sav');
+exports.loadGen1SaveFile('./yellow.sav');
 /**
  * Money: 3175
  * Badges: 0?
