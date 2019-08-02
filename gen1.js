@@ -97,11 +97,13 @@ const parsePartyPokemon = (buf, boxed = false) => {
     const extraData = boxed ? undefined : {
         'currentHp': Buffer.from(pokemon.slice(0x01, 0x01 + 2)).readInt16BE(0),
         'maxHp': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
-        'attack': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
-        'defense': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
-        'speed': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
-        'special': Buffer.from(pokemon.slice(0x22, 0x22 + 2)).readInt16BE(0),
+        'attack': Buffer.from(pokemon.slice(0x24, 0x24 + 2)).readInt16BE(0),
+        'defense': Buffer.from(pokemon.slice(0x26, 0x26 + 2)).readInt16BE(0),
+        'speed': Buffer.from(pokemon.slice(0x28, 0x28 + 2)).readInt16BE(0),
+        'special': Buffer.from(pokemon.slice(0x2A, 0x2A + 2)).readInt16BE(0),
     };
+    if (extraData)
+        console.log(extraData);
     // const evs = pokemon.slice(0x11, 0x11 + 10);
     const ivs = pokemon.slice(0x1B, 0x1B + 2);
     const id = ivs.toString('binary');
