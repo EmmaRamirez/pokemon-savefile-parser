@@ -113,7 +113,10 @@ const getSpeciesList = (buf: Buffer) => {
 const parsePartyPokemon = (buf: Buffer, boxed = false) => {
     const pokemon = Buffer.from(buf);
     const species = GEN_1_POKEMON_MAP[pokemon[0x00]];
-    const level = boxed ? pokemon[0x21] : pokemon[0x03];
+    const levelA = pokemon[0x21];
+    const levelB = pokemon[0x03];
+    // Level is stored in two places, so we need to determine the true level
+    const level = levelA ? levelA : levelB;
     const type1 = TYPE[pokemon[0x05]];
     const type2 = TYPE[pokemon[0x06]];
     const moves = [
@@ -180,7 +183,6 @@ const parsePokemonParty = (buf: Buffer) => {
     const pokemonList = getPokemonListForParty(party.slice(0x0008, 0x0008 + 264), 6);
     const OTNames = party.slice(0x0110, 0x0110 + 66);
     const pokemonNames = getPokemonNames(party.slice(0x0152, 0x152 + 66), 6);
-    console.log(pokemonNames)
 
     return {
         entriesUsed,
@@ -316,9 +318,6 @@ export const loadGen1SaveFile = async (filename: string, format: 'plain' | 'nuzl
         throw new Error('Oops');
     }
 }
-
-loadGen1SaveFile('./blue.sav');
-loadGen1SaveFile('./yellow.sav');
 
 /**
  * Money: 3175
